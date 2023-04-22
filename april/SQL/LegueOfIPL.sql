@@ -73,3 +73,52 @@ SELECT
 FROM "Game" G
 	JOIN "ClanMathDetail" D ON G.id = D."gameId"
 		JOIN "ClanInfo" C ON D."clanId" = C.id;
+		
+-- top 5 The clan with the best average winning rate
+SELECT
+	"clanName",
+	won_matches,
+	lose_matches,
+	ROUND(won_matches * 100.0 / (won_matches + lose_matches), 1) AS 평균승률
+FROM (
+	SELECT 
+		C.id,
+		C."clanName",
+		COUNT(CASE WHEN "result" = TRUE THEN 1 END) AS won_matches,
+		COUNT(CASE WHEN "result" = FALSE THEN 0 END) AS lose_matches
+	FROM "ClanMathDetail" Detail
+	JOIN "ClanInfo" C ON Detail."clanId" = C.id
+	GROUP BY C."id", C."clanName"
+) subquery
+GROUP BY "clanName", won_matches, lose_matches, 평균승률
+ORDER BY 평균승률 DESC
+LIMIT 5;
+
+
+
+-- Updates on the last 10 games of the top 5 Clan
+SELECT
+	outerQuery.*,
+	ROW_NUMBER() OVER (PARTITION BY outerQuery."clanName" ORDER BY outerQuery."matchTime" DESC) AS rn
+FROM (
+SELECT
+	subquery.*,	
+	ROUND(won_matches * 100.0 / (won_matches + lose_matches), 1) AS 평균승률,
+	ROW_NUMBER() OVER (PARTITION BY subquery."clanName" ORDER BY G."matchTime" DESC) AS rn,
+	G."matchKey",
+	G."matchTime"
+FROM (
+	SELECT 
+		C.id clan_id,
+		C."clanName",
+		COUNT(CASE WHEN "result" = TRUE THEN 1 END) AS won_matches,
+		COUNT(CASE WHEN "result" = FALSE THEN 0 END) AS lose_matches
+	FROM "ClanMathDetail" Detail
+	JOIN "ClanInfo" C ON Detail."clanId" = C.id
+	GROUP BY C."id", C."clanName"
+) subquery
+JOIN "ClanMathDetail" MD ON subquery.clan_id = MD."clanId"
+JOIN "Game" G ON MD."gameId" = G.id
+ORDER BY 평균승률 DESC
+) outerQuery
+WHERE outerQuery."rn" <= 10
