@@ -1,7 +1,7 @@
 -- all nexon user count exception nexon user sn is null
 SELECT COUNT(*)
 FROM "NexonUserInfo" u
-WHERE u."userNexonSn" != 0
+WHERE u."userNexonSn" <> 0
 
 -- all game count
 SELECT COUNT(*)
@@ -43,38 +43,47 @@ SELECT b.nickname,
 	   g."matchKey",
 	   g."matchTime"
 FROM "NexonUserBattleLog" b
-	JOIN "Game" g  ON b."gameId" = g.id
-	JOIN "NexonUserInfo" u ON b."nexonUserId" = u.id
+JOIN "Game" g  ON b."gameId" = g.id
+JOIN "NexonUserInfo" u ON b."nexonUserId" = u.id;
 
-
--- clan match detail
-SELECT 
-	C."clanName" 클랜명,
-	C."ladderPoint",
-	C."clanNo" 클랜ID, 
-	C."clanMark1" 클랜마크1, 
-	C."clanMark2" 클랜마크2, 
-	C."winningRate" 전체승률,
-	G."matchKey",
-	G."matchTime",
-	D."result" 승패
-FROM "ClanInfo" C
-	JOIN "ClanMathDetail" D ON C.id = D."clanId"
-		JOIN "Game" G ON D."gameId" = G.id;
 
 -- clan match detail
 SELECT
+	"clanName" 클랜명,
+	"ladderPoint",
+	"clanNo" 클랜ID,
+	CASE
+		WHEN D."isRedTeam" = TRUE THEN '선블루'
+		ELSE '선레드'
+	END AS position,
+	CASE
+		WHEN D."result" = TRUE THEN '승리'
+		ELSE '패배'
+	END AS 승패,	
+	"winningRate" 전체승률,
+	"clanMark1" 클랜마크1, 
+	"clanMark2" 클랜마크2,
 	G."matchKey",
-	G."matchTime",
-	C."clanName",
-	D."result" 승패,
-	C."ladderPoint",
-	C."winningRate"
+	G."matchTime"
+FROM "ClanInfo" C
+JOIN "ClanMathDetail" D ON C.id = D."clanId"
+JOIN "Game" G ON D."gameId" = G.id;
+
+-- clan match detail
+SELECT 
+	G."matchKey", 
+	C1."clanName" AS clan1_name, 
+	D1."result" AS clan1_result, 
+	C2."clanName" AS clan2_name, 
+	D2."result" AS clan2_result
 FROM "Game" G
-	JOIN "ClanMathDetail" D ON G.id = D."gameId"
-		JOIN "ClanInfo" C ON D."clanId" = C.id;
-		
--- top 5 The clan with the best average winning rate
+JOIN "ClanMathDetail" D1 ON G."id" = D1."gameId"
+JOIN "ClanInfo" C1 ON D1."clanId" = C1."id"
+JOIN "ClanMathDetail" D2 ON G."id" = D2."gameId"
+JOIN "ClanInfo" C2 ON D2."clanId" = C2."id"
+WHERE D1."isRedTeam" = TRUE AND D2."isRedTeam" = FALSE;
+
+-- top 5 The clan with the best average winning rate And more than 10 match
 SELECT
 	"clanName",
 	won_matches,
@@ -89,36 +98,104 @@ FROM (
 	FROM "ClanMathDetail" Detail
 	JOIN "ClanInfo" C ON Detail."clanId" = C.id
 	GROUP BY C."id", C."clanName"
-) subquery
+) AS subquery
 GROUP BY "clanName", won_matches, lose_matches, 평균승률
+HAVING won_matches + lose_matches > 10
 ORDER BY 평균승률 DESC
-LIMIT 5;
+LIMIT 5; 
 
 
-
--- Updates on the last 10 games of the top 5 Clan
-SELECT
-	outerQuery.*,
-	ROW_NUMBER() OVER (PARTITION BY outerQuery."clanName" ORDER BY outerQuery."matchTime" DESC) AS rn
-FROM (
-SELECT
-	subquery.*,	
-	ROUND(won_matches * 100.0 / (won_matches + lose_matches), 1) AS 평균승률,
-	ROW_NUMBER() OVER (PARTITION BY subquery."clanName" ORDER BY G."matchTime" DESC) AS rn,
-	G."matchKey",
-	G."matchTime"
-FROM (
+-- Game Detail The top 5 winning percentage of the clan's last 10 games played over 10 times
+WITH ClanMatch AS (
 	SELECT 
-		C.id clan_id,
+		C."id",
 		C."clanName",
 		COUNT(CASE WHEN "result" = TRUE THEN 1 END) AS won_matches,
-		COUNT(CASE WHEN "result" = FALSE THEN 0 END) AS lose_matches
+		COUNT(CASE WHEN "result" = FALSE THEN 1 END) AS lose_matches,
+		ROUND(COUNT(CASE WHEN "result" = TRUE THEN 1 END) * 100.0 / COUNT(*), 1) AS average_win_rate
 	FROM "ClanMathDetail" Detail
-	JOIN "ClanInfo" C ON Detail."clanId" = C.id
+	JOIN "ClanInfo" C ON Detail."clanId" = C.id 
 	GROUP BY C."id", C."clanName"
-) subquery
-JOIN "ClanMathDetail" MD ON subquery.clan_id = MD."clanId"
-JOIN "Game" G ON MD."gameId" = G.id
-ORDER BY 평균승률 DESC
-) outerQuery
-WHERE outerQuery."rn" <= 10
+	HAVING COUNT(*) > 10
+	ORDER BY average_win_rate DESC	
+	LIMIT 5
+), TopClans AS (
+	SELECT
+		ClanMatch."id",
+		"clanName",
+		CASE D."result"
+			WHEN TRUE THEN '승리'
+			ELSE '패배'
+		END AS 승패,
+		CASE D."isRedTeam"
+			WHEN TRUE THEN '선블루'
+			ELSE '선레드'		
+		END AS team_position,
+		G."matchKey",
+		G."matchTime",
+		ROW_NUMBER() OVER (PARTITION BY "clanName" ORDER BY G."matchTime" DESC) AS match_index
+	FROM ClanMatch
+	JOIN "ClanMathDetail" D ON ClanMatch."id" = D."clanId"
+	JOIN "Game" G ON D."gameId" = G."id"
+	ORDER BY average_win_rate DESC
+)
+SELECT 
+	T."clanName",
+	T.team_position,
+	T.승패,
+	T."matchKey",
+	T."matchTime"
+FROM TopClans AS T
+WHERE T.match_index <= 10
+LIMIT 10 * (SELECT COUNT(*) FROM ClanMatch);
+
+-- 
+
+WITH ClanMatch AS (
+	SELECT 
+		C."id",
+		C."clanName",
+		COUNT(CASE WHEN "result" = TRUE THEN 1 END) AS won_matches,
+		COUNT(CASE WHEN "result" = FALSE THEN 1 END) AS lose_matches,
+		ROUND(COUNT(CASE WHEN "result" = TRUE THEN 1 END) * 100.0 / COUNT(*), 1) AS average_win_rate
+	FROM "ClanMathDetail" Detail
+	JOIN "ClanInfo" C ON Detail."clanId" = C.id 
+	GROUP BY C."id", C."clanName"
+	HAVING COUNT(*) > 10
+	ORDER BY average_win_rate DESC	
+	LIMIT 5
+), TopClans AS (
+	SELECT
+		ClanMatch."id",
+		"clanName",
+		CASE D."result"
+			WHEN TRUE THEN '승리'
+			ELSE '패배'
+		END AS 승패,
+		CASE D."isRedTeam"
+			WHEN TRUE THEN '선블루'
+			ELSE '선레드'		
+		END AS team_position,
+		G."matchKey",
+		G."matchTime",
+		ROW_NUMBER() OVER (PARTITION BY "clanName" ORDER BY G."matchTime" DESC) AS match_index
+	FROM ClanMatch
+	JOIN "ClanMathDetail" D ON ClanMatch."id" = D."clanId"
+	JOIN "Game" G ON D."gameId" = G."id"
+	ORDER BY average_win_rate DESC
+), RecentTenGame AS (
+SELECT 
+	T."clanName",
+	T.team_position,
+	T.승패,
+	T."matchKey",
+	T."matchTime"
+FROM TopClans AS T
+WHERE T.match_index <= 10
+LIMIT 10 * (SELECT COUNT(*) FROM ClanMatch)
+)
+SELECT
+	"clanName",
+	ROUND(COUNT(CASE WHEN R.승패 = '승리' THEN 1 END) * 100.0 / COUNT(*), 1) AS recent_10_game_win_rate
+FROM RecentTenGame R  
+GROUP BY "clanName";
