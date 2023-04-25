@@ -1,0 +1,47 @@
+{
+  "title": "화양연화",
+  "originalTitle": "花樣年華",
+  "release": 2000,
+  "movieDetails": {
+    "grade": 8.1,
+    "genre": "romance, drama",
+    "playTime": "1:39",
+    "productDirector": "Wong Kar-wai"
+  },
+  "teaser": {
+    "url1": "http://...",
+    "url2": "http://...",
+    "url3": "http://...",
+    "url4": "http://..."
+  },
+  "cast": [
+    {
+      "actorName": "Tony Leung Chiu-wai",
+      "roleName": "Chow Mo-Wan"
+    },
+    {
+      "actorName": "Maggie Cheung",
+      "roleName": "Su Li-Zhen"
+    },
+    {
+      "actorName": "Rebecca Pan",
+      "roleName": "Mrs. suen"
+    },
+    {
+      "actorName": "Kelly Lai Chen",
+      "roleName": "Mr.Ho"
+    },
+    {
+      "actorName": "Siu Ping-lam",
+      "roleName": "Ah Ping"
+    },
+    {
+      "actorName": "Mama Hung"
+    },
+    {
+      "acotorName": "Joe Cheung",
+      "roleName": "Man living in Mr.."
+    }
+  ],
+  "synopsis": "홍콩의 지역 매일 신문 편집장인 초 모완..."
+}
