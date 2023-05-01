@@ -1,19 +1,18 @@
 {
   "title": "화양연화",
   "originalTitle": "花樣年華",
+  "titleImg": "http://www...",
   "release": 2000,
-  "movieDetails": {
-    "grade": 8.1,
-    "genre": "romance, drama",
-    "playTime": "1:39",
-    "productDirector": "Wong Kar-wai"
-  },
-  "teaser": {
-    "url1": "http://...",
-    "url2": "http://...",
-    "url3": "http://...",
-    "url4": "http://..."
-  },
+  "grade": 8.1,
+  "genre": [{ "genre": "COMEDY" }, { "genre": "ACTION" }],
+  "playTime": "1:39",
+  "productDirector": "Wong Kar-wai",
+  "teaser": [
+    { "url": "http://..." },
+    { "url": "http://..." },
+    { "url": "http://..." },
+    { "url": "http://..." }
+  ],
   "cast": [
     {
       "actorName": "Tony Leung Chiu-wai",
