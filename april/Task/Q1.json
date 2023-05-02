@@ -4,15 +4,10 @@
   "titleImg": "http://www...",
   "release": 2000,
   "grade": 8.1,
-  "genre": [{ "genre": "COMEDY" }, { "genre": "ACTION" }],
+  "genre": ["COMEDY", "ACTION"],
   "playTime": "1:39",
   "productDirector": "Wong Kar-wai",
-  "teaser": [
-    { "url": "http://..." },
-    { "url": "http://..." },
-    { "url": "http://..." },
-    { "url": "http://..." }
-  ],
+  "teaser": ["http://...,", "http://...,", "http://...,", "http://...,"],
   "cast": [
     {
       "actorName": "Tony Leung Chiu-wai",
